@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "q": "nodemon ./src/asyncQueue/main.ts"
+    "q": "nodemon ./src/asyncQueue/main.ts",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +13,7 @@
   "devDependencies": {
     "@swc/cli": "^0.1.57",
     "@swc/core": "^1.2.196",
+    "@swc/jest": "^0.2.21",
     "@types/jest": "^28.1.0",
     "jest": "^28.1.0",
     "nodemon": "^2.0.16",

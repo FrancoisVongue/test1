@@ -1,76 +1,121 @@
-type SimpleProces = {
+type State = Record<string, any>
+type SimpleProces<T extends State, A extends any[]> = {
   type: 'step',
-  run: (...args: any[]) => Promise<any>
+  name: string,
+  run: (state: T, ...args: [...A]) => Promise<void>
 }
-type SuccessiveProcess = {
+type SuccessiveProcess<T extends State, A extends any[]> = {
   type: 'successively',
-  children: Process[]
+  children: Process<T, A>[]
 }
-type ParallelProcess = {
+type ParallelProcess<T extends State, A extends any[]> = {
   type: 'parallel',
-  children: Process[]
+  children: Process<T, A>[]
 }
-type ConditionalProcess = {
+type ConditionalProcess<T extends State, A extends any[]> = {
   type: 'if',
-  condition: boolean,
-  then: Process,
-  else: Process,
+  condition: (state: T, ...args: [...A]) => Promise<boolean>,
+  then: Process<T, A>,
+  else: Process<T, A>,
 }
-type Process =
-  | SuccessiveProcess
-  | ParallelProcess
-  | ConditionalProcess
-  | SimpleProces
-  
-const logAfter = async (ms: number, msg: string): Promise<any> => {
-  return new Promise(res => setTimeout(() => (console.log(msg), res(void 0)), ms));
-}
+type Process<T extends State, A extends any[]> =
+  | SuccessiveProcess<T, A>
+  | ParallelProcess<T, A>
+  | ConditionalProcess<T, A>
+  | SimpleProces<T, A>
 
+  
 console.log('start');
 
-const proc: Process = {
+type User = { age: number, name: string, item?: 'steak' | 'icecream' };
+type Args = [number, string];
+const proc: Process<User, Args> = {
   type: 'successively',
   children: [
     {
       type: 'step',
-      run: () => logAfter(700, 'step 1')
+      name: 'add first arg to age',
+      run: async (state, a: number, b: string) => {
+        await sleepFor(200);
+        state.age = state.age + a;
+      }
     },
     {
       type: 'step',
-      run: async () => console.log('step 2'),
+      name: 'set name from second arg',
+      run: async (state, a: number, b: string) => {
+        await sleepFor(200);
+        state.name = b
+      }
     },
     {
       type: 'parallel',
       children: [
         {
           type: 'step',
-          run: () => logAfter(100, 'step 3')
+          name: 'multiply first arg by age',
+          run: async (state, a: number, b: string) => {
+            await sleepFor(800);
+            state.age = state.age * a;
+          }
         },
         {
           type: 'step',
-          run: async () => console.log('step 4'),
-        },
+          name: 'divide age by first arg',
+          run: async (state, a: number, b: string) => {
+            await sleepFor(100);
+            state.age = state.age / a;
+          }
+        }
       ]
     },
     {
       type: 'if',
-      condition: 2 > 5,
+      condition: async ({age, name}, a, b) => {
+        if (age > 18) {
+          return true;
+        } else {
+          return false;
+        }
+      },
       then: {
         type: 'step',
-        run: async () => console.log('step 5'),
+        name: 'give steak',
+        run: async (state, a: number, b: string) => {
+          await sleepFor(200);
+          state.item = 'steak';
+        }
       },
       else: {
         type: 'step',
-        run: async () => console.log('step 6'),
+        name: 'give icecream',
+        run: async (state, a: number, b: string) => {
+          await sleepFor(200);
+          state.item = 'icecream';
+        }
       }
     },
   ]
 }
 
-export class FSM {
-  run = async (p: Process): Promise<any> => {
+export class FSM<
+  T extends State,
+  A extends any[]
+> {
+
+  constructor(
+    private state: T,
+    private args: A
+  ){
+    console.log(`initial state:`);
+    console.log(JSON.stringify(this.state, null, '  '));
+  }
+
+  run = async (p: Process<T, A>): Promise<any> => {
     if (p.type === 'step') {
-      return p.run();
+      await p.run(this.state, ...this.args);
+      console.log(`state after step: ${p.name}`);
+      console.log(JSON.stringify(this.state, null, '  '));
     } else if (p.type === 'successively') {
       return p.children.reduce((acc, child) => {
         acc = acc.then(_ => this.run(child));
@@ -79,10 +124,21 @@ export class FSM {
     } else if (p.type === 'parallel') {
       return Promise.all(p.children.map(this.run));
     } else if (p.type === 'if') {
-      return p.condition ? this.run(p.then) : this.run(p.else);
+      const condition = await p.condition(this.state, ...this.args);
+      return condition ? this.run(p.then) : this.run(p.else);
     }
   }
 }
 
-const fsm = new FSM();
+const fsm = new FSM<User, Args>(
+  {age: 21, name: 'francois'},
+  [2, 'Francois']
+);
 fsm.run(proc).then(_ => console.log('finish'));
+
+async function sleepFor (ms: number): Promise<any> {
+  return new Promise(res => setTimeout(() => res(void 0), ms));
+}
+async function logAfter (ms: number, msg: string): Promise<any> {
+  return new Promise(res => setTimeout(() => (console.log(msg), res(void 0)), ms));
+}

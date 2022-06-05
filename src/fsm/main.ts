@@ -14,7 +14,7 @@ type ParallelProcess<T extends State, A extends any[]> = {
 }
 type ConditionalProcess<T extends State, A extends any[]> = {
   type: 'if',
-  condition: (state: T, ...args: [...A]) => Promise<boolean>,
+  condition: (state: T, ...args: A) => Promise<boolean>,
   then: Process<T, A>,
   else: Process<T, A>,
 }
@@ -117,10 +117,10 @@ export class FSM<
       console.log(`state after step: ${p.name}`);
       console.log(JSON.stringify(this.state, null, '  '));
     } else if (p.type === 'successively') {
-      return p.children.reduce((acc, child) => {
-        acc = acc.then(_ => this.run(child));
-        return acc;
-      }, Promise.resolve());
+      return p.children.reduce(
+        (acc, child) => acc.then(_ => this.run(child)),
+        Promise.resolve()
+      );
     } else if (p.type === 'parallel') {
       return Promise.all(p.children.map(this.run));
     } else if (p.type === 'if') {
@@ -131,8 +131,8 @@ export class FSM<
 }
 
 const fsm = new FSM<User, Args>(
-  {age: 21, name: 'francois'},
-  [2, 'Francois']
+  {age: 12, name: 'francois'},
+  [2, 'Michael']
 );
 fsm.run(proc).then(_ => console.log('finish'));
 

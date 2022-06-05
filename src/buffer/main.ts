@@ -1,3 +1,6 @@
+// value optional -> type ends with ?
+// obj optional -> contains [__optional: true] entry
+// arr optional -> [<<schema>>, true] // second arg to schema is true
 type OrOptional<T extends string> = T | `${T}?`
 type BufferValueType = 
   | OrOptional<'string'>
@@ -9,7 +12,7 @@ type BufferSchemaType =
   | BufferValueType
   | BufferSchema
   | [BufferSchema, boolean?] // [schema, optional?]
-  | boolean
+  | (boolean | undefined)
 
 type BufferSchema = {
   ['__optional']?: boolean,
@@ -60,7 +63,7 @@ class BufferSerializer<T = any> {
           }
         }
         return this.BufferEntry(key, type, value);
-      });
+      }) as [any, any][];
     
     const bufferValue: T = Object.fromEntries(bufferedEntries);
 
@@ -76,10 +79,12 @@ class BufferSerializer<T = any> {
     } else if (typeof type == 'object') {
       const objSchema: BufferSchema = type;
       return objSchema?.['__optional'] || false;
+    } else {
+      return false;
     }
   }
   
-  private BufferEntry(key, type, value) {
+  private BufferEntry(key, type, value)  {
     if (typeof type === 'string') {
       if(type.startsWith('string')) {
         const actualType = typeof value;
@@ -130,7 +135,6 @@ const serializer = new BufferSerializer(userSchema);
 const buffer = serializer.toBuffer({
   id: 'u1231',
   age: 30,
-  name: 'whatever',
   mail: {
     address: 'New York 11st',
   },

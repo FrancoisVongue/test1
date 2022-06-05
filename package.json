@@ -6,6 +6,7 @@
   "scripts": {
     "q": "nodemon ./src/asyncQueue/main.ts",
     "buffer": "nodemon ./src/buffer/main.ts",
+    "fsm": "nodemon ./src/fsm/main.ts",
     "cfg": "nodemon ./src/config/main.ts",
     "cfg2": "RABBITMQ_PORT=3123 npm run cfg",
     "cfg3": "RABBITMQ_PASSWORD=verysecret npm run cfg",
